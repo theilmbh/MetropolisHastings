@@ -10,11 +10,11 @@ import pandas as pd
 # Define parameters
 
 D = 1.5
-omega = 250.0
-eps = 0.25 / omega
-T = 1.0
-Nt = int(np.floor(4*omega*T))
-Nmc = 400
+Nt = 1000
+T = 1.25
+eps = 0.1
+omega = 0.25/eps
+Nmc = 100
 Nsweeps = 10
 kappa = 0.25*(eps**2)*(omega**2)
 
@@ -56,23 +56,22 @@ def burn_in(path, Nburn, g):
         
     return path
     
-def main():
 
-    # Here we actually measure things
-    #First, burn in
-    g = (1 - kappa)/(1+kappa)
-    path = burn_in(init_path, 10, g)
-    qfinals = np.zeros((Nmc, 1))
-    for mc_iter in range(Nmc):
+# Here we actually measure things
+#First, burn in
+g = (1 - kappa)/(1+kappa)
+path = burn_in(init_path, 10, g)
+qfinals = np.zeros((Nmc, Nt))
+for mc_iter in range(Nmc):
+    if np.mod(mc_iter, 10)==0:
         print(mc_iter)
-        # run an iteration
-        path = metropolis_update(path, g, Nsweeps)
-        #measure
-        qfinals[mc_iter] = path[-2]
-    qfinals_distrib = pd.DataFrame(qfinals)
-    plt.figure()
-    qfinals_distrib.plot(kind='hist')
-        
-if __name__ == '__main__':
-    main()
+    # run an iteration
+    path = metropolis_update(path, g, Nsweeps)
+    #measure
+    paths[mc_iter, :] = path[1]*path[5]
+print('done')
+qfinals_distrib = pd.DataFrame(qfinals)
+plt.figure()
+qfinals_distrib.plot(kind='hist')
+print(np.mean(qfinals))
         
