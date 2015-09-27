@@ -56,22 +56,33 @@ def burn_in(path, Nburn, g):
         
     return path
     
+def generate_paths(g):
+    
+    path = burn_in(init_path, 10, g)
+    paths = np.zeros((Nmc, Nt))
+    for mc_iter in range(Nmc):
+        if np.mod(mc_iter, 50)==0:
+            print(mc_iter)
+        # run an iteration
+        path = metropolis_update(path, g, Nsweeps)
+        #measure
+        paths[mc_iter, :] = np.squeeze(path)  
+        
+    return paths
+    
 
 # Here we actually measure things
 #First, burn in
+# Try to reproduce harmonic oscillator amplitude <0,T|0,0>
 g = (1 - kappa)/(1+kappa)
-path = burn_in(init_path, 10, g)
-qfinals = np.zeros((Nmc, Nt))
-for mc_iter in range(Nmc):
-    if np.mod(mc_iter, 10)==0:
-        print(mc_iter)
-    # run an iteration
-    path = metropolis_update(path, g, Nsweeps)
-    #measure
-    paths[mc_iter, :] = path[1]*path[5]
+paths = generate_paths(g)
 print('done')
-qfinals_distrib = pd.DataFrame(qfinals)
+# Find how many were in the range 0 +/- 0.1
+#at_origin = np.abs(paths) <= 0.5
+#num_at_origin = np.sum(at_origin, 0)
+#prob_at_origin = (1.0*num_at_origin) / Nmc
+
+# Let's just average the paths and see what happens
+avg_path = np.mean(paths, 0)
 plt.figure()
-qfinals_distrib.plot(kind='hist')
-print(np.mean(qfinals))
-        
+plt.plot(avg_path)
