@@ -56,7 +56,7 @@ def burn_in(path, Nburn, g):
         
     return path
     
-def generate_paths(g):
+def generate_paths(g, Nmc):
     
     path = burn_in(init_path, 10, g)
     paths = np.zeros((Nmc, Nt))
@@ -75,7 +75,7 @@ def generate_paths(g):
 #First, burn in
 # Try to reproduce harmonic oscillator amplitude <0,T|0,0>
 g = (1 - kappa)/(1+kappa)
-paths = generate_paths(g)
+paths = generate_paths(g, 4000)
 print('done')
 # Find how many were in the range 0 +/- 0.1
 #at_origin = np.abs(paths) <= 0.5
