@@ -13,8 +13,8 @@ D = 1.5
 Nt = 1000
 T = 1.25
 eps = 0.1
-omega = 0.25/eps
-Nmc = 100
+omega = 0.005/eps
+Nmc = 20000
 Nsweeps = 10
 kappa = 0.25*(eps**2)*(omega**2)
 
@@ -35,6 +35,14 @@ def delta_SE_ho(path, delta, j, g):
 
 	return delta*(delta + 2*path[j] - g*(path[j-1] + path[j+1]))
 	
+def S(path, g):
+    
+    return np.dot(path[1:-1].T, path[1:-1]) - g*np.dot(path[0:-1].T, path[1:])
+
+def S_paths(paths, g):
+    
+    return np.diagonal(np.dot(paths[:, 1:-1].T, paths[:, 1:-1])) - np.diagonal(g*np.dot(paths[:, 0:-2].T, paths[:, 1:]))
+  	
 def metropolis_update(path, g, Nsweeps):
 
     for sweep in range(Nsweeps):
@@ -46,8 +54,7 @@ def metropolis_update(path, g, Nsweeps):
             if np.random.rand() <= accept_prob:
                 path[tstep] = path[tstep]+shift
     return path
-        
-        
+                
 def burn_in(path, Nburn, g):
 
     for burn in range(Nburn):
@@ -70,7 +77,6 @@ def generate_paths(g, Nmc):
         
     return paths
     
-
 # Here we actually measure things
 #First, burn in
 # Try to reproduce harmonic oscillator amplitude <0,T|0,0>
