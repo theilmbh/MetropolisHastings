@@ -1,34 +1,40 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <time.h>
 
 /* C implementation of metropolis hastings for evaluating path integrals */
 
+double rand_in_range(double min, double max)
+{
+	
+	return min+(((double)rand() / (double)RAND_MAX )* (max-min));
+	
+}
+
+
 /* Action definitions */
 
-float S_euclidean(float paths[], float g, int n_paths, int nt)
+double S_euclidean(double *path, double g, int nt)
 {
 
     /* Returns the value of the action for a path */
     int i, j;
-    float A = 0;
-    float B = 0;
+    double A = 0;
+    double B = 0;
     
     /* np.diagonal(np.dot(paths[:, 1:-1].T, paths[:, 1:-1])) - np.diagonal(g*np.dot(paths[:, 0:-2].T, paths[:, 1:])) */
-    for(i = 0; i < n_paths; i++)
+	for(j = 0; j < nt-1; j++)
     {
-    	for(j = 0; j < nt-1; j++)
-    	{
-    		A += paths[i][j+1]*paths[i][j+1];
-    		B += g*paths[i][j]*paths[i][j+1];
-    	}
+    	A += path[j+1]*path[j+1];
+    	B += g*path[j]*path[j+1];
     } 
     
     return A+B;
 
 }
 
-float delta_S(float* path, float g, float delta, int path_index)
+double delta_S(double* path, double g, double delta, int path_index)
 {
 
     /* Returns value of change in action due to updating value at path_index by delta */
@@ -36,15 +42,38 @@ float delta_S(float* path, float g, float delta, int path_index)
 
 }
 
-float metropolis_update(float* path, int n_sweeps)
+double metropolis_update(double* path, double g, int n_sweeps, int nt, double D)
 {
 
-	/* TODO: Return path after performing metropolis hastings updating for n_sweeps sweeps */
-	return -1.0;
+	int sweep, tstep;
+	double shift, dS, accept_prob;
+	
+	/* Return path after performing metropolis hastings updating for n_sweeps sweeps */
+	for(sweep = 0; sweep < n_sweeps; sweep++)
+	{
+		for(tstep = 0; tstep < nt; tstep++)
+		{
+			/* Get a Random Shift */
+			shift = rand_in_range(-1.0*D, D);
+			
+			/* Compute change in action */
+			dS = delta_S(path, g, shift, tstep);
+			
+			/* Determine acceptance probability */
+			accept_prob = fmin(1.0, exp(-1.0*dS));	
+			if(rand_in_range(0.0, 1.0) <= accept_prob)
+			{
+				/* accept the shift */
+				path[tstep] += shift;
+			}
+		}
+	}
+				
+	return 0;
 	
 }
 
-float burn_in(float* path, int n_burn)
+double burn_in(double* path, int n_burn, int nt, double g, double D)
 {
 
 	/* Burn in path for n_burn reps */
@@ -52,24 +81,36 @@ float burn_in(float* path, int n_burn)
 	int n_burn_sweeps = 100;
 	for(burn = 0; burn < n_burn; burn++)
 	{
-		metropolis_update(path, n_burn_sweeps);
+		metropolis_update(path, g, n_burn_sweeps, nt, D);
 	}
 	return 0;
 	
 }
 
-float* get_sample_paths(int n_paths)
+int get_sample_paths(int n_paths)
 {
 
 	/* TODO: Use the metropolis hastings algorithm to generate n_paths samples according to the action */
-	float x = -1;
-	return &x;
+	
+	return 0;
 	
 }
 
 int main()
 {
 
+	/* Test all of the functions */
+	double rand_out;
+	int n_rand = 10;
+	srand(time(NULL));
+	rand();
+	for(int i = 0; i<n_rand; i++)
+	{
+		rand_out = rand_in_range(0.0, 1.0);
+		printf("Result of rand_in_range(0.0, 1.0): %f\n", rand_out);
+	}
+	
+	
 	return 0;
 
 }
