@@ -6,7 +6,7 @@
 
 /* Action definitions */
 
-float S_euclidean(float* paths, float g, int n_paths, int nt)
+float S_euclidean(float *paths, float g, int n_paths, int nt)
 {
 
     /* Returns the value of the action for a path */
@@ -28,7 +28,7 @@ float S_euclidean(float* paths, float g, int n_paths, int nt)
 
 }
 
-float delta_S(float* path, float g, float delta, float path_index)
+float delta_S(float* path, float g, float delta, int path_index)
 {
 
     /* Returns value of change in action due to updating value at path_index by delta */
