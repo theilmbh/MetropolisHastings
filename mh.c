@@ -12,7 +12,6 @@ double rand_in_range(double min, double max)
 	
 }
 
-
 /* Action definitions */
 
 double S_euclidean(double *path, double g, int nt)
@@ -87,13 +86,48 @@ double burn_in(double* path, int n_burn, int nt, double g, double D)
 	
 }
 
-int get_sample_paths(int n_paths)
+int get_sample_paths(int n_paths, int nt, int n_burn, double g, double D)
 {
 
 	/* TODO: Use the metropolis hastings algorithm to generate n_paths samples according to the action */
+	double **paths = malloc(n_paths*sizeof(double*));
+	
+	double* path = generate_random_initial_path(nt, -5.0, 5.0);
+	burn_in(path, n_burn, nt, g, D);
+	
+	int i;
+	double *path_sample
+	/*for(i=0, i<=n_paths, i++)*/
+	
 	
 	return 0;
 	
+}
+
+double* generate_random_initial_path(int nt, double min, double max)
+{
+
+	int i;
+	double *path = malloc(nt*sizeof(double));
+	
+	for(i=0; i<nt; i++)
+	{
+		path[i] = rand_in_range(min, max);
+	}
+	return path;
+	
+}
+
+int print_path(double* path, int nt)
+{
+	/* print path */
+	printf("---- CURRENT PATH VALUES ---- \n");
+	for(int i = 0; i<nt; i++)
+	{
+		printf("%f\n", path[i]);
+	}
+	printf("\n");
+	return 0;
 }
 
 int main()
@@ -110,6 +144,20 @@ int main()
 		printf("Result of rand_in_range(0.0, 1.0): %f\n", rand_out);
 	}
 	
+	/* Generate random initial path */
+	int nt = 10;
+	double path_min = -10.0;
+	double path_max = 10.0;
+	double *path = generate_random_initial_path(nt, path_min, path_max);
+	print_path(path, nt);
+	
+	/* burn in path */
+	printf("Burning in...\n");
+	double g = 1.0;
+	int n_burn = 10000;
+	double D = 1.5;
+	burn_in(path, n_burn, nt, g, D);
+	print_path(path, nt);
 	
 	return 0;
 
