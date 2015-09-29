@@ -6,7 +6,7 @@
 
 /* Action definitions */
 
-float S_euclidean(float *paths, float g, int n_paths, int nt)
+float S_euclidean(float paths[], float g, int n_paths, int nt)
 {
 
     /* Returns the value of the action for a path */
