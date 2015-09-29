@@ -1,12 +1,12 @@
-#include stdio.h
-#include math.h
-#include stdlib.h
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
 
 /* C implementation of metropolis hastings for evaluating path integrals */
 
 /* Action definitions */
 
-float S_euclidean(float* path, struct params, int n_paths, int nt)
+float S_euclidean(float* paths, float g, int n_paths, int nt)
 {
 
     /* Returns the value of the action for a path */
@@ -28,7 +28,7 @@ float S_euclidean(float* path, struct params, int n_paths, int nt)
 
 }
 
-float delta_S(float* path, float delta, float path_index)
+float delta_S(float* path, float g, float delta, float path_index)
 {
 
     /* Returns value of change in action due to updating value at path_index by delta */
