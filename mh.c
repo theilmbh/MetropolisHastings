@@ -204,7 +204,7 @@ int write_to_csv(char* fname, double* data, int n_data)
 			fprintf(outfile, "%f\n", data[i]);
 		}
 	}
-	
+	fclose(outfile);
 	return 0;
 }
 			
