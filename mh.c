@@ -21,7 +21,7 @@ void display_progress(int completed, int total, int cmp_mod)
     if(completed % cmp_mod == 0)
     {
         double pct_complete = 100* ((double)completed / (double)total);
-        printf("%d of %d (%f%%) Completed.\n", completed, total, pct_complete);
+        printf("%d of %d (%.2f%%) Completed.\n", completed, total, pct_complete);
     }
 
 }
@@ -170,19 +170,65 @@ void test_random(n_rand)
     }
 }
 
+double* compute_correlation(double **paths, int n_paths, int te_0, int tau_eps_max)
+{
+
+	int i, te;
+	double sum;
+	double *corr = calloc(tau_eps_max, sizeof(double));
+	for(te = 1; te<tau_eps_max; te++)
+	{
+		sum = 0;
+		for(i=0; i<n_paths; i++)
+		{
+			sum += paths[i][te] * paths[i][1];
+		}
+		corr[te - 1] = sum / (double)n_paths;
+	}
+	
+	return corr;
+}
+
+int write_to_csv(char* fname, double* data, int n_data)
+{
+	
+	FILE *outfile;
+	outfile = fopen(fname, "w");
+	
+	int i;
+	
+	if(outfile != NULL)
+	{
+		for(i = 0; i<n_data; i++)
+		{
+			fprintf(outfile, "%f\n", data[i]);
+		}
+	}
+	
+	return 0;
+}
+			
 int main()
 {
 
     
     int n_rand = 10;
-    double g = 1.0;
+    double eps = 0.01;
+    double omega_eps = 0.25;
+    double omega = omega_eps / eps;
+    double kappa = 0.25*pow(eps, 2)*pow(omega, 2);
+    double g = (1 - kappa) / (1 + kappa);
+    
     int n_burn = 10000;
     double D = 1.5;
     int nt = 1000;
-    int n_paths = 10000;
+    int n_paths = 40000;
     int n_sweeps = 100;
     double path_min = -10.0;
     double path_max = 10.0;
+    
+    int tau_eps_max = 15;
+    int te_0 = nt / 2;
 
     srand(time(NULL));
     rand();
@@ -192,6 +238,12 @@ int main()
     paths = get_sample_paths(n_paths, nt, n_sweeps, n_burn, g, D);
     /*print_path(paths[n_paths-1], nt);*/
     printf("Done!\n");
+    
+    /* compute correlations */
+    double* correlations = compute_correlation(paths, n_paths, te_0, tau_eps_max);
+    
+    char* outfile_name = "correlations.dat";
+    write_to_csv(outfile_name, correlations, tau_eps_max);
     
     return 0;
 
