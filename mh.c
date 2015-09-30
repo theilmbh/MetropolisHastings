@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
 /* C implementation of metropolis hastings for evaluating path integrals */
 
@@ -86,23 +87,6 @@ double burn_in(double* path, int n_burn, int nt, double g, double D)
 	
 }
 
-int get_sample_paths(int n_paths, int nt, int n_burn, double g, double D)
-{
-
-	/* TODO: Use the metropolis hastings algorithm to generate n_paths samples according to the action */
-	double **paths = malloc(n_paths*sizeof(double*));
-	
-	double* path = generate_random_initial_path(nt, -5.0, 5.0);
-	burn_in(path, n_burn, nt, g, D);
-	
-	int i;
-	double *path_sample
-	/*for(i=0, i<=n_paths, i++)*/
-	
-	
-	return 0;
-	
-}
 
 double* generate_random_initial_path(int nt, double min, double max)
 {
@@ -130,12 +114,44 @@ int print_path(double* path, int nt)
 	return 0;
 }
 
+double** get_sample_paths(int n_paths, int nt, int n_sweeps, int n_burn, double g, double D)
+{
+
+	/* Use the metropolis hastings algorithm to generate n_paths samples according to the action */
+	double *paths = calloc(n_paths*nt, sizeof(double));
+	double **rows = malloc(n_paths*sizeof(double*));
+	double *path = generate_random_initial_path(nt, -5.0, 5.0);
+	
+	burn_in(path, n_burn, nt, g, D);
+	
+	int i;
+	for(i=0; i<=n_paths; i++)
+	{
+		rows[i] = paths + i*nt;
+		metropolis_update(path, g, n_sweeps, nt, D);
+		memcpy(rows[i], path, nt*sizeof(double));
+	}
+	
+	return rows;
+	
+}
+
 int main()
 {
 
-	/* Test all of the functions */
 	double rand_out;
 	int n_rand = 10;
+	double g = 1.0;
+	int n_burn = 10000;
+	double D = 1.5;
+	int nt = 10;
+	int n_paths = 10000;
+	int n_sweeps = 100;
+	double path_min = -10.0;
+	double path_max = 10.0;
+	
+	/* Test all of the functions */
+
 	srand(time(NULL));
 	rand();
 	for(int i = 0; i<n_rand; i++)
@@ -145,19 +161,19 @@ int main()
 	}
 	
 	/* Generate random initial path */
-	int nt = 10;
-	double path_min = -10.0;
-	double path_max = 10.0;
 	double *path = generate_random_initial_path(nt, path_min, path_max);
 	print_path(path, nt);
 	
 	/* burn in path */
 	printf("Burning in...\n");
-	double g = 1.0;
-	int n_burn = 10000;
-	double D = 1.5;
 	burn_in(path, n_burn, nt, g, D);
 	print_path(path, nt);
+	
+	/* try to get some sample paths */
+	double **paths;
+	paths = get_sample_paths(n_paths, nt, n_sweeps, n_burn, g, D);
+	print_path(paths[n_paths-1], nt);
+	
 	
 	return 0;
 
