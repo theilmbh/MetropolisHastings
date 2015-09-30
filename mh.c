@@ -13,6 +13,19 @@ double rand_in_range(double min, double max)
 	
 }
 
+void display_progress(int completed, int total, int cmp_mod)
+{
+
+	/* clear line */
+	/*printf("\33[2K\r");*/
+	if(completed % cmp_mod == 0)
+	{
+		double pct_complete = 100* ((double)completed / (double)total);
+		printf("%d of %d (%f%%) Completed.\n", completed, total, pct_complete);
+	}
+
+}
+
 /* Action definitions */
 
 double S_euclidean(double *path, double g, int nt)
@@ -79,9 +92,12 @@ double burn_in(double* path, int n_burn, int nt, double g, double D)
 	/* Burn in path for n_burn reps */
 	int burn;
 	int n_burn_sweeps = 100;
+	
+	printf("Burning in...\n");
 	for(burn = 0; burn < n_burn; burn++)
 	{
 		metropolis_update(path, g, n_burn_sweeps, nt, D);
+		display_progress(burn, n_burn, 250);
 	}
 	return 0;
 	
@@ -94,6 +110,7 @@ double* generate_random_initial_path(int nt, double min, double max)
 	int i;
 	double *path = malloc(nt*sizeof(double));
 	
+	printf("Generating a random initial path of length %d\n", nt);
 	for(i=0; i<nt; i++)
 	{
 		path[i] = rand_in_range(min, max);
@@ -118,62 +135,63 @@ double** get_sample_paths(int n_paths, int nt, int n_sweeps, int n_burn, double 
 {
 
 	/* Use the metropolis hastings algorithm to generate n_paths samples according to the action */
+	int i;
 	double *paths = calloc(n_paths*nt, sizeof(double));
 	double **rows = malloc(n_paths*sizeof(double*));
 	double *path = generate_random_initial_path(nt, -5.0, 5.0);
+	for(i=0; i<n_paths; ++i)
+	{
+		rows[i] = paths + i*nt;
+	}
 	
 	burn_in(path, n_burn, nt, g, D);
 	
-	int i;
-	for(i=0; i<=n_paths; i++)
+	
+	printf("Getting sample paths...\n");
+	for(i=0; i<n_paths; i++)
 	{
-		rows[i] = paths + i*nt;
+		
 		metropolis_update(path, g, n_sweeps, nt, D);
 		memcpy(rows[i], path, nt*sizeof(double));
+		display_progress(i, n_paths, n_paths / 10);
 	}
 	
 	return rows;
 	
 }
 
-int main()
+void test_random(n_rand)
 {
-
 	double rand_out;
-	int n_rand = 10;
-	double g = 1.0;
-	int n_burn = 10000;
-	double D = 1.5;
-	int nt = 10;
-	int n_paths = 10000;
-	int n_sweeps = 100;
-	double path_min = -10.0;
-	double path_max = 10.0;
-	
-	/* Test all of the functions */
-
-	srand(time(NULL));
-	rand();
 	for(int i = 0; i<n_rand; i++)
 	{
 		rand_out = rand_in_range(0.0, 1.0);
 		printf("Result of rand_in_range(0.0, 1.0): %f\n", rand_out);
 	}
+}
+
+int main()
+{
+
 	
-	/* Generate random initial path */
-	double *path = generate_random_initial_path(nt, path_min, path_max);
-	print_path(path, nt);
-	
-	/* burn in path */
-	printf("Burning in...\n");
-	burn_in(path, n_burn, nt, g, D);
-	print_path(path, nt);
+	int n_rand = 10;
+	double g = 1.0;
+	int n_burn = 10000;
+	double D = 1.5;
+	int nt = 1000;
+	int n_paths = 10000;
+	int n_sweeps = 100;
+	double path_min = -10.0;
+	double path_max = 10.0;
+
+	srand(time(NULL));
+	rand();
 	
 	/* try to get some sample paths */
 	double **paths;
 	paths = get_sample_paths(n_paths, nt, n_sweeps, n_burn, g, D);
-	print_path(paths[n_paths-1], nt);
-	
+	/*print_path(paths[n_paths-1], nt);*/
+	printf("Done!\n");
 	
 	return 0;
 
