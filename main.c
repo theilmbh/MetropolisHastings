@@ -1,17 +1,16 @@
+/* C implementation of metropolis hastings for evaluating path integrals */
+/* Brad Theilman September 2015 										 */
+
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-
 #include "mh.h"
-
-/* C implementation of metropolis hastings for evaluating path integrals */
 	
 int main()
 {
-
-    
+ 
     int n_rand = 10;
     double eps = 0.01;
     double omega_eps = 0.25;
@@ -34,9 +33,10 @@ int main()
     rand();
     
     /* try to get some sample paths */
+    char* pathfile_name = "sample_paths.csv";
     double **paths;
     paths = get_sample_paths(n_paths, nt, n_sweeps, n_burn, g, D);
-    /*print_path(paths[n_paths-1], nt);*/
+    write_paths_to_csv(pathfile_name, paths, n_paths, nt);
     printf("Done!\n");
     
     /* compute correlations */

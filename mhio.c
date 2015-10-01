@@ -36,12 +36,33 @@ int write_to_csv(char* fname, double* data, int n_data)
 	outfile = fopen(fname, "w");
 	
 	int i;
-	
 	if(outfile != NULL)
 	{
 		for(i = 0; i<n_data; i++)
 		{
-			fprintf(outfile, "%f\n", data[i]);
+			fprintf(outfile, "%f,", data[i]);
+		}
+	}
+	fclose(outfile);
+	return 0;
+}
+
+int write_paths_to_csv(char* fname, double** paths, int n_paths, int nt)
+{
+	
+	FILE *outfile;
+	outfile = fopen(fname, "w");
+	
+	int i, j;
+	if(outfile != NULL)
+	{
+		for(i = 0; i<n_paths; i++)
+		{
+			for(j = 0; j<nt; j++)
+			{
+				fprintf(outfile, "%f,", paths[i][j]);
+			}
+			fprintf(outfile, "\n");
 		}
 	}
 	fclose(outfile);

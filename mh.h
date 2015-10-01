@@ -22,6 +22,7 @@ double* generate_random_initial_path(int nt, double min, double max);
  
 /* mhio */
 int write_to_csv(char* fname, double* data, int n_data);
+int write_paths_to_csv(char* fname, double** paths, int n_paths, int nt);
 int print_path(double* path, int nt);
 void display_progress(int completed, int total, int cmp_mod);
 
