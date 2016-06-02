@@ -5,10 +5,10 @@
 #include <math.h>
 
 /* Initialize random number generators */
-__global__ void init_rand(curandState *state)
+__global__ void init_rand(curandState *state, int sd)
 {
 	int idx = blockIdx.x;
-	curand_init(1337, idx, 0, &state[idx]);
+	curand_init(1337, idx*sd, 0, &state[idx]);
 }
 
 __global__ void gibbs_sample(curandState *state, float* alpha, float* beta, float* samples, 
@@ -17,37 +17,38 @@ __global__ void gibbs_sample(curandState *state, float* alpha, float* beta, floa
 
 	int blk = blockIdx.x;
 	int i, j;
-	int cell, samp;
+	int cell, samp, sweep;
 	float df=0.0;
 	float bdif=0.0;
 	float p1=0.0;
 	for(samp=0; samp < nsamps; samp++)
 	{
 		int sampstart = blk*N*nsamps + samp*N;
-		/* need to include nsweeps */
-		for(cell=0; cell < N; cell++)
+		for(sweep=0; sweep<nsweeps; sweep++)
 		{
-			bdif=0.0;
-			df = 0.0;
-			p1=0.0;
-			for(j=0; j<=cell-1; j++)
+			for(cell=0; cell < N; cell++)
 			{
-				bdif += beta[j*(N)-j*(j+1)/2+i]*samples[sampstart+j];
-			}
-			for(j=cell; j<=N-1; j++)
-			{
-				bdif += beta[cell*(N)-cell*(cell+1)/2 +j]*samples[sampstart+j];
-			}
-			
-			df = -1.0*alpha[cell] - bdif;
-			p1 =expf(df)/(1+expf(df));
-			if(curand_uniform(&state[blk]) < p1)
-			{
-				samples[sampstart + cell] = 1.0;
-			}
-			else
-			{
-				samples[sampstart + cell] = 0.0;
+				bdif=0.0;
+				df = 0.0;
+				p1=0.0;
+				for(j=0; j<=cell-1; j++)
+				{
+					bdif += beta[j*(N)-j*(j+1)/2+i]*samples[sampstart+j];
+				}
+				for(j=cell; j<=N-1; j++)
+				{
+					bdif += beta[cell*(N)-cell*(cell+1)/2 +j]*samples[sampstart+j];
+				}
+				df = -1.0*alpha[cell] - bdif;
+				p1 =expf(df)/(1+expf(df));
+				if(curand_uniform(&state[blk]) < p1)
+				{
+					samples[sampstart + cell] = 1.0;
+				}
+				else
+				{
+					samples[sampstart + cell] = 0.0;
+				}
 			}
 		}
 	}
@@ -61,7 +62,7 @@ __global__ void compute_sample_mean(float* samples, float* sample_mean, int nsam
 	{
 		sample_mean[cell] += samples[cell + i*N];
 	}
-	/*sample_mean[cell] = sample_mean[cell] / nsamps;*/
+	sample_mean[cell] = sample_mean[cell] / nsamps;
 }
 
 __global__ void compute_sample_covariance(float* samples, float* sample_covariance, int N)
@@ -138,6 +139,7 @@ int main()
 	cudaMalloc(&d_state, nblocks);
 
 	/* generate random initial conditoins */
+	srand(time(NULL));
 	int i;
 	for(i=0; i<N; i++)
 	{
@@ -155,7 +157,7 @@ int main()
 
 	/* sample */
 	printf("Sampling...\n");
-	init_rand<<<nblocks, 1>>>(d_state);
+	init_rand<<<nblocks, 1>>>(d_state, time(NULL));
 	gibbs_sample<<<nblocks, 1>>>(d_state, alpha, beta, samples, N, samps_per_block, nsweeps);
 	printf("Finished.  nsamps=%d\n", nsamps_tot);
 	printf("Computing Sample mean...\n");
@@ -168,7 +170,7 @@ int main()
 	/* Display*/
 	for(i=0; i<N; i++)
 	{
-		printf("%2.1f\n", sample_mean_res[i]);
+		printf("%f\n", sample_mean_res[i]);
 	}
 	write_paths_to_csv("maxent_samples.csv", samples_res, nsamps_tot, N, "w");
 
