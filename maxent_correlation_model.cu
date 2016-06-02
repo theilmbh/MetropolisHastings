@@ -17,9 +17,8 @@ __global__ void gibbs_sample(curandState *state, float* alpha, float* beta, floa
 
 	int blk = blockIdx.x;
 	int i, j;
-	int cell;
-	float s;
-	float df, bdif;
+	int cell, samp;
+	float df, bdif, p1;
 	for(samp=0; samp < nsamps; samp++)
 	{
 		int sampstart = blk*N*nsamps + samp*N;
@@ -77,7 +76,7 @@ int main()
 	int N = 20; /* Number of Neurons */
 	int samps_per_block = 1024;
 	int nblocks = 1024
-	int nsamps_tot = samps_per_block*nblocks
+	int nsamps_tot = samps_per_block*nblocks;
 	int nsweeps = 10;
 
 	/* Compute sizes of various data structures */
@@ -124,13 +123,13 @@ int main()
 	/* sample */
 	printf("Sampling...\n");
 	init_rand<<<nblocks, 1>>>(d_state);
-	gibbs_sample<<<nblocks, 1>>>(d_state, alpha, beta, samples, N, samps_per_block, nsweeps)
+	gibbs_sample<<<nblocks, 1>>>(d_state, alpha, beta, samples, N, samps_per_block, nsweeps);
 	printf("Finished.  nsamps=%d", nsamps_tot);
 	printf("Computing Sample mean...");
 	compute_sample_mean<<<N, 1>>>(samples, sample_mean, nsamps_tot, N);
 
 	/*copy back sample mean*/
-	cudaMemcpy(sample_mean_res, sample_mean, cudaMemcpyDeviceToHost);
+	cudaMemcpy(sample_mean_res, sample_mean, mean_size, cudaMemcpyDeviceToHost);
 
 	/* Display*/
 	for(i=0; i<N; i++)
