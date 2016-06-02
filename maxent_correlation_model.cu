@@ -75,7 +75,7 @@ int main()
 
 	int N = 20; /* Number of Neurons */
 	int samps_per_block = 1024;
-	int nblocks = 1024
+	int nblocks = 1024;
 	int nsamps_tot = samps_per_block*nblocks;
 	int nsweeps = 10;
 
