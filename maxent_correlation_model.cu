@@ -32,14 +32,14 @@ __global__ void gibbs_sample(curandState *state, float* alpha, float* beta, floa
 			p1=0.0;
 			for(j=0; j<=cell-1; j++)
 			{
-				bdif += 2*beta[j*N-j*(j+1)/2 + cell];
+				bdif += beta[j*(N)-j*(j+1)/2+i]*samples[sampstart+j];
 			}
-			/*for(j=cell+1; j<=N-1; j++)
+			for(j=cell; j<=N-1; j++)
 			{
-				bdif += beta[cell*N - cell*(cell+1)/2 +j];
-			}*/
+				bdif += beta[cell*(N)-cell*(cell+1)/2 +j]*samples[sampstart+j];
+			}
 			
-			df = -1.0*alpha[cell] - 0.0*bdif;
+			df = -1.0*alpha[cell] - bdif;
 			p1 =expf(df)/(1+expf(df));
 			if(curand_uniform(&state[blk]) < p1)
 			{
@@ -112,9 +112,9 @@ int main()
 
 	/* Compute sizes of various data structures */
 	size_t mean_size = N*sizeof(float);
-	size_t cov_size = N*(N-1)/2*sizeof(float);
+	size_t cov_size = (N*(N+1)/2)*sizeof(float);
 	size_t samples_size = N*nsamps_tot*sizeof(float);
-
+	
 	/* allocate result memory */
 	float *alpha_res = (float*)malloc(mean_size);
 	float *beta_res = (float*)malloc(cov_size);
@@ -144,9 +144,9 @@ int main()
 		alpha_res[i] = (2*((float)rand()/(float)RAND_MAX) - 1);
 		/*printf("%f\n", alpha_res[i]);*/
 	}
-	for(i=0; i<N*(N-1)/2; i++)
+	for(i=0; i<(N*(N+1)/2); i++)
 	{
-		beta_res[i]= 0.0*(2*((float)rand()/(float)RAND_MAX) - 1);
+		beta_res[i]= 0.1*(2*((float)rand()/(float)RAND_MAX) - 1);
 	}
 
 	/* copy initial conditions over to device */
