@@ -19,33 +19,24 @@ __global__ void gibbs_sample(curandState *state, float* alpha, float* beta, floa
 	int i, j;
 	int cell;
 	float s;
-	float up, dp, df, p1;
+	float df, bdif;
 	for(samp=0; samp < nsamps; samp++)
 	{
-
 		int sampstart = blk*N*nsamps + samp*N;
 		/* need to include nsweeps */
 		for(cell=0; cell < N; cell++)
 		{
-			samples[sampstart + cell] = 1.0;
-			for(i = 0; i < N; i++)
+
+			for(j=0; j<=cell-1; j++)
 			{
-				up += -1.0*alpha[i]*samples[sampstart + i];
-				for(j=0; j<i; j++)
-				{
-					up += -1.0*beta[(i + j)-1]*samples[sampstart+ i]*samples[sampstart + j];
-				}
+				bdif += beta[j*N-j*(j+1)/2 + cell];
 			}
-			samples[sampstart + cell] = 0.0;
-			for(i = 0; i < N; i++)
+			for(j=cell+1; j<=N-1; j++)
 			{
-				dp += -1.0*alpha[i]*samples[sampstart+ i];
-				for(j=0; j<i; j++)
-				{
-					dp += -1.0*beta[(i + j)-1]*samples[sampstart + i]*samples[sampstart + j];
-				}
+				bdif += beta[cell*N - cell*(cell+1)/2 +j];
 			}
-			df = up - dp;
+			
+			df = -1.0*alpha[cell] - bdif;
 			p1 =expf(df)/(1+expf(df));
 			if(curand_uniform(&state[blk]) < p1)
 			{
@@ -71,7 +62,7 @@ __global__ void compute_sample_covariance(float* samples, float* sample_covarian
 	int cell = blockIdx.x;
 	for(int j=0; j<cell; j++)
 	{
-		sample_covariance[cell*N]
+		sample_covariance[cell*N] = 0.0;
 	}
 }
 
@@ -86,15 +77,18 @@ int main()
 	int N = 20; /* Number of Neurons */
 	int samps_per_block = 1024;
 	int nblocks = 1024
+	int nsamps_tot = samps_per_block*nblocks
+	int nsweeps = 10;
 
 	/* Compute sizes of various data structures */
 	size_t mean_size = N*sizeof(float);
 	size_t cov_size = N*(N-1)/2*sizeof(float);
-	size_t samples_size = N*samps_per_block*nblocks*sizeof(float);
+	size_t samples_size = N*nsamps_tot*sizeof(float);
 
 	/* allocate result memory */
 	float *alpha_res = (float*)malloc(mean_size);
 	float *beta_res = (float*)malloc(cov_size);
+	float *sample_mean_res = (float*)malloc(mean_size);
 
 	/* Allocate device memory */
 	float *sample_mean;
@@ -112,8 +106,50 @@ int main()
 	curandState *d_state;
 	cudaMalloc(&d_state, nblocks);
 
+	/* generate random initial conditoins */
+	int i;
+	for(i=0; i<N; i++)
+	{
+		alpha_res[i] = 2*rand()-1;
+	}
+	for(i=0; i<N*(N-1)/2; i++)
+	{
+		beta_res[i]=2*rand()-1;
+	}
+
+	/* copy initial conditions over to device */
+	cudaMemcpy(alpha, alpha_res, mean_size, cudaMemcpyHostToDevice);
+	cudaMemcpy(beta, beta_res, cov_size, cudaMemcpyHostToDevice);
+
+	/* sample */
+	printf("Sampling...\n");
+	init_rand<<<nblocks, 1>>>(d_state);
+	gibbs_sample<<<nblocks, 1>>>(d_state, alpha, beta, samples, N, samps_per_block, nsweeps)
+	printf("Finished.  nsamps=%d", nsamps_tot);
+	printf("Computing Sample mean...");
+	compute_sample_mean<<<N, 1>>>(samples, sample_mean, nsamps_tot, N);
+
+	/*copy back sample mean*/
+	cudaMemcpy(sample_mean_res, sample_mean, cudaMemcpyDeviceToHost);
+
+	/* Display*/
+	for(i=0; i<N; i++)
+	{
+		printf("%f\n", sample_mean_res[i]);
+	}
 
 
+	/* free memory */
+	free(alpha_res);
+	free(beta_res);
+	free(sample_mean_res);
 
+	cudaFree(sample_mean);
+	cudaFree(sample_covariance);
+	cudaFree(samples);
+	cudaFree(alpha);
+	cudaFree(beta);
+	cudaFree(d_state);
 
+	return 0;
 }
