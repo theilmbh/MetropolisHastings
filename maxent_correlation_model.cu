@@ -65,14 +65,19 @@ __global__ void compute_sample_mean(float* samples, float* sample_mean, int nsam
 	sample_mean[cell] = sample_mean[cell] / nsamps;
 }
 
-__global__ void compute_sample_covariance(float* samples, float* sample_covariance, int N)
+__global__ void compute_sample_covariance(float* samples, float* sample_covariance, int nsamps, int N)
 {
-	int cell = blockIdx.x;
-	for(int j=0; j<cell; j++)
+	int i = blockIdx.x;
+	int j = threadIdx.x;
+	sample_covariance[i*N + j] = 0.0;
+	for(int samp = 0; samp<nsamps; samp++)
 	{
-		sample_covariance[cell*N] = 0.0;
+		sample_covariance[i*N+j] += samples[samp*N+i]*samples[samp*N+j];
 	}
+	sample_covariance[i*N+j] = sample_covariance[i*N+j]/nsamps;
+
 }
+
 
 __global__ void update_parameter_estimates(float* alpha, float* beta, float* sample_mean, float* sample_covariance, int N)
 {
@@ -120,6 +125,7 @@ int main()
 	float *alpha_res = (float*)malloc(mean_size);
 	float *beta_res = (float*)malloc(cov_size);
 	float *sample_mean_res = (float*)malloc(mean_size);
+	float *sample_covariance_res = (float*)malloc(cov_size);
 	float *samples_res = (float*)malloc(samples_size);
 
 	/* Allocate device memory */
@@ -128,6 +134,8 @@ int main()
 	float *samples;
 	float *alpha;
 	float *beta;
+
+	dim3 cov_block(N, N);
 
 	cudaMalloc(&sample_mean, mean_size);
 	cudaMalloc(&sample_covariance, cov_size);
@@ -162,10 +170,11 @@ int main()
 	printf("Finished.  nsamps=%d\n", nsamps_tot);
 	printf("Computing Sample mean...\n");
 	compute_sample_mean<<<N, 1>>>(samples, sample_mean, nsamps_tot, N);
-
-	/*copy back sample mean*/
+	compute_sample_covariance<<<N, N>>>(samples, sample_covariance, nsamps_tot, N);
+	/*copy back sample  mean*/
 	cudaMemcpy(sample_mean_res, sample_mean, mean_size, cudaMemcpyDeviceToHost);
 	cudaMemcpy(samples_res, samples, samples_size, cudaMemcpyDeviceToHost);
+	cudaMemcpy(sample_covariance_res, sample_covariance, cov_size, cudaMemcpyDeviceToHost);
 
 	/* Display*/
 	for(i=0; i<N; i++)
@@ -173,6 +182,7 @@ int main()
 		printf("%f\n", sample_mean_res[i]);
 	}
 	write_paths_to_csv("maxent_samples.csv", samples_res, nsamps_tot, N, "w");
+	write_paths_to_csv("maxent_cov.csv", sample_covariance_res, N, N, "w");
 
 
 	/* free memory */
