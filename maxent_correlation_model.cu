@@ -68,13 +68,13 @@ __global__ void compute_sample_mean(float* samples, float* sample_mean, int nsam
 __global__ void compute_sample_covariance(float* samples, float* sample_covariance, int nsamps, int N)
 {
 	int i = blockIdx.x;
-	
-	sample_covariance[i] = 0.0;
+	int j = threadIdx.x;
+	sample_covariance[i*N +j] = 0.0;
 	for(int samp = 0; samp<nsamps; samp++)
 	{
-		sample_covariance[i] += samples[samp*N+i]*samples[samp*N+j];
+		sample_covariance[i*N+j] += samples[samp*N+i]*samples[samp*N+j];
 	}
-	sample_covariance[i] = sample_covariance[i]/nsamps;
+	sample_covariance[i*N+j] = sample_covariance[i*N+j]/nsamps;
 
 }
 
@@ -119,14 +119,14 @@ int main()
 	/* Compute sizes of various data structures */
 	size_t mean_size = N*sizeof(float);
 	size_t cov_size = (N*(N+1)/2)*sizeof(float);
-	size_t full_cov_size = N*N*sizof(float);
+	size_t full_cov_size = N*N*sizeof(float);
 	size_t samples_size = N*nsamps_tot*sizeof(float);
 	
 	/* allocate result memory */
 	float *alpha_res = (float*)malloc(mean_size);
 	float *beta_res = (float*)malloc(cov_size);
 	float *sample_mean_res = (float*)malloc(mean_size);
-	float *sample_covariance_res = (float*)malloc(cov_size);
+	float *sample_covariance_res = (float*)malloc(full_cov_size);
 	float *samples_res = (float*)malloc(samples_size);
 
 	/* Allocate device memory */
@@ -139,7 +139,7 @@ int main()
 	dim3 cov_block(N, N);
 
 	cudaMalloc(&sample_mean, mean_size);
-	cudaMalloc(&sample_covariance, cov_size);
+	cudaMalloc(&sample_covariance, full_cov_size);
 	cudaMalloc(&samples, samples_size);
 	cudaMalloc(&alpha, mean_size);
 	cudaMalloc(&beta, cov_size);
@@ -171,11 +171,11 @@ int main()
 	printf("Finished.  nsamps=%d\n", nsamps_tot);
 	printf("Computing Sample mean...\n");
 	compute_sample_mean<<<N, 1>>>(samples, sample_mean, nsamps_tot, N);
-	compute_sample_covariance<<<N*(N+1)/2, 1>>>(samples, sample_covariance, nsamps_tot, N);
+	compute_sample_covariance<<<N, N>>>(samples, sample_covariance, nsamps_tot, N);
 	/*copy back sample  mean*/
 	cudaMemcpy(sample_mean_res, sample_mean, mean_size, cudaMemcpyDeviceToHost);
 	cudaMemcpy(samples_res, samples, samples_size, cudaMemcpyDeviceToHost);
-	cudaMemcpy(sample_covariance_res, sample_covariance, cov_size, cudaMemcpyDeviceToHost);
+	cudaMemcpy(sample_covariance_res, sample_covariance, full_cov_size, cudaMemcpyDeviceToHost);
 
 	/* Display*/
 	for(i=0; i<N; i++)
@@ -183,7 +183,7 @@ int main()
 		printf("%f\n", sample_mean_res[i]);
 	}
 	write_paths_to_csv("maxent_samples.csv", samples_res, nsamps_tot, N, "w");
-	write_paths_to_csv("maxent_cov.csv", sample_covariance_res, N*(N+1)/2, 1, "w");
+	write_paths_to_csv("maxent_cov.csv", sample_covariance_res, N, N, "w");
 
 
 	/* free memory */
