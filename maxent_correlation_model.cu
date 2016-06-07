@@ -79,8 +79,24 @@ __global__ void compute_sample_covariance(float* samples, float* sample_covarian
 }
 
 
-__global__ void update_parameter_estimates(float* alpha, float* beta, float* sample_mean, float* sample_covariance, int N)
+__global__ void update_alpha_estimate(float* alpha, float* sample_mean, float* data_mean, float eta, int N)
 {
+
+	int i = blockIdx.x;
+	{
+		alpha[i] += eta*(sample_mean[i] - data_mean[i]);
+	}
+
+
+}
+__global__ void update_beta_estimate(float* beta, float* sample_covariance, float* data_covariance, float eta, int N)
+{
+
+	int i = blockIdx.x;
+	{
+		alpha[i] += eta*(sample_mean[i] - data_mean[i]);
+	}
+
 
 }
 
